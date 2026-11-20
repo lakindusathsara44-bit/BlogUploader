@@ -88,15 +88,24 @@ export async function loadPosts() {
   return posts.filter(Boolean).sort((a, b) => b.date.localeCompare(a.date) || b.filename.localeCompare(a.filename));
 }
 
+async function readAllRows(table, columns) {
+  const pageSize = 1000;
+  const rows = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client.from(table).select(columns)
+      .order('created_at', { ascending: true }).range(offset, offset + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+  return rows;
+}
+
 export async function loadEngagement() {
-  const [reactionResult, commentResult] = await Promise.all([
-    client.from('apokolips_blog_reactions').select('post_slug,reaction,created_at').limit(10000),
-    client.from('apokolips_blog_comments').select('post_slug,created_at').limit(10000)
+  const [reactions, comments] = await Promise.all([
+    readAllRows('apokolips_blog_reactions', 'post_slug,reaction,created_at'),
+    readAllRows('apokolips_blog_comments', 'post_slug,created_at')
   ]);
-  if (reactionResult.error) throw reactionResult.error;
-  if (commentResult.error) throw commentResult.error;
-  const reactions = reactionResult.data || [];
-  const comments = commentResult.data || [];
   const byPost = {};
   const byDay = {};
   const ensure = slug => byPost[slug] || (byPost[slug] = { likes: 0, reactions: 0, comments: 0 });
