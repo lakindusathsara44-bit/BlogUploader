@@ -108,7 +108,13 @@ export async function loadEngagement() {
   ]);
   const byPost = {};
   const byDay = {};
+  const byDayByPost = {};
   const ensure = slug => byPost[slug] || (byPost[slug] = { likes: 0, reactions: 0, comments: 0 });
+  const ensurePostDay = (slug, day) => {
+    byDayByPost[slug] ||= {};
+    byDayByPost[slug][day] ||= { likes: 0, comments: 0 };
+    return byDayByPost[slug][day];
+  };
   reactions.forEach(row => {
     const item = ensure(row.post_slug);
     item.reactions += 1;
@@ -116,7 +122,10 @@ export async function loadEngagement() {
     const day = (row.created_at || '').slice(0, 10);
     if (day) {
       byDay[day] ||= { likes: 0, comments: 0 };
-      if (row.reaction === 'like') byDay[day].likes += 1;
+      if (row.reaction === 'like') {
+        byDay[day].likes += 1;
+        ensurePostDay(row.post_slug, day).likes += 1;
+      }
     }
   });
   comments.forEach(row => {
@@ -125,9 +134,10 @@ export async function loadEngagement() {
     if (day) {
       byDay[day] ||= { likes: 0, comments: 0 };
       byDay[day].comments += 1;
+      ensurePostDay(row.post_slug, day).comments += 1;
     }
   });
-  return { byPost, byDay, totalLikes: reactions.filter(row => row.reaction === 'like').length, totalReactions: reactions.length, totalComments: comments.length };
+  return { byPost, byDay, byDayByPost, totalLikes: reactions.filter(row => row.reaction === 'like').length, totalReactions: reactions.length, totalComments: comments.length };
 }
 
 export function formatDate(value) {
