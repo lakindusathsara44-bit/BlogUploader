@@ -16,9 +16,12 @@ The page writes media into `uploads/` and Markdown posts into `posts/` using the
 Create a fine-grained personal access token restricted to this repository with **Contents: Read and write** permission. Enter it only into the uploader when publishing. It is held in the current page session and is not stored in localStorage or committed to the repository.
 
 Post structure:
-- `[Img]`, `[Video]`, or `[Text]`
-- Media reference (where applicable)
-- Description / post text
-- Attribution (defaults to `@GitHub`)
+- Media posts: `[Media]`, media reference, then description.
+- Text-only posts: `[Text]`, then text content.
+- No author attribution is appended.
 
-The Apokolips main website must separately read and render Markdown files from this repository for published posts to appear on its blog page. This uploader does not modify the Apokolips repository.
+## Automatic Apokolips blog connection
+
+The Apokolips blog reads Markdown posts from this repository automatically. Each published post receives a stable post slug, which connects it to the existing shared Like/reaction and Comment/reply service on the Apokolips blog. Visitors interact with posts on the website; the uploader itself contains no Like or Comment controls.
+
+Uploaded images and videos are served from this repository's public raw files. The Apokolips blog uses the existing Neon-backed social service for shared reactions and comments.
