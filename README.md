@@ -1,38 +1,50 @@
 # Apokolips Blog Uploader
 
-A static publishing interface for preparing and publishing image, video and text posts to this repository.
+A password-protected publishing page for the Apokolips blog.
 
 ## Pages
 
-- `index.html` — Upload image, video and text posts.
-- `posts.html` — Browse all posts uploaded through this repository and view their Like and Comment counts.
-- `insights.html` — Analytics dashboard with charts for Likes, Comments, per-post engagement and the last 14 days of activity.
-- `analytics.js` — Shared public post reader and read-only connection to the Apokolips community metrics service.
+- `index.html` — Password login and image, video, or text post upload. No live preview, GitHub token field, or destination-repository field.
+- `posts.html` — Browse posts uploaded through this repository and their Like and Comment counts.
+- `insights.html` — Analytics with Like/Comment charts and engagement summaries.
+- `analytics.js` — Shared post reader and read-only Apokolips engagement data client.
 
-## Publish with GitHub Pages
+## Login
 
-1. Open **Settings → Pages**.
-2. Under **Build and deployment**, choose **Deploy from a branch**.
-3. Select branch `main` and folder `/ (root)`, then Save.
-4. The uploader will be available at `https://lakindusathsara44-bit.github.io/BlogUploader/`.
+Visitors enter one shared password. The password is stored in the Neon database as a salted PBKDF2-HMAC-SHA256 hash; it is not embedded in this repository or returned to the browser.
 
-## Publishing posts
+After login, the browser stores only a random session token in localStorage. The database stores its SHA-256 hash. Sessions last 30 days, and users remain signed in across browser restarts until the browser data is cleared, the session expires, or the user logs out. Failed logins are rate-limited.
 
-The uploader writes media into `uploads/` and Markdown posts into `posts/` using the GitHub Contents API. It also updates `posts/index.json` so the Apokolips blog and these dashboard pages can discover each post.
+## One-time owner publishing setup
 
-Create a fine-grained personal access token restricted to this repository with **Contents: Read and write** permission. Enter it only into the uploader when publishing. It is held in the current page session and is not stored in localStorage or committed to the repository.
+The Neon Function `bloguploader` handles publishing. Friends do not need a GitHub account, personal access token, or repository choice.
 
-Post structure:
-- Media posts: `[Media]`, media reference, then description.
+The repository owner must configure one fine-grained GitHub token as the Neon Function environment variable `GITHUB_TOKEN`. Restrict that token to this repository and grant **Contents: Read and write** only. Do not put the token in this repository, in the browser, or in messages. Once configured on the backend, every authorized uploader uses the shared password only.
+
+Function URL:
+`https://br-silent-frost-b3chnc64-bloguploader.compute.c-4.ap-southeast-1.aws.neon.tech/`
+
+## Publish format
+
+Media files are saved in `uploads/`; Markdown posts are saved in `posts/`; `posts/index.json` is updated automatically.
+
+- Image/video posts: `[Media]`, media reference, then description.
 - Text-only posts: `[Text]`, then text content.
 - No author attribution is appended.
 
-## Community activity and insights
+The uploader currently accepts files up to 80 MB. Large file publishing should be tested with the deployed hosting/runtime before relying on the maximum.
 
-The Apokolips blog stores shared reactions and comments in the existing Neon database:
-- `apokolips_blog_reactions` — reaction type and post slug.
-- `apokolips_blog_comments` — comments and replies with post slug.
+## GitHub Pages
 
-The Insights and All Posts pages read aggregate activity from those public tables using the same anonymous Neon Auth/Data API configuration as the Apokolips blog. No database password or privileged API key is included in this repository. The dashboard only reads interaction data; Like and Comment actions remain on the Apokolips blog website.
+Enable **Settings → Pages → Deploy from a branch → main → /(root)** if Pages is not already enabled.
 
-For each uploaded post, the post slug is `uploaded-<filename-without-extension>`, matching the slug used by the Apokolips blog.
+Expected URL:
+`https://lakindusathsara44-bit.github.io/BlogUploader/`
+
+## Community activity
+
+Like and Comment counts come from the existing Apokolips Neon tables:
+- `apokolips_blog_reactions`
+- `apokolips_blog_comments`
+
+The uploader does not create a separate Like/Comment system. Visitors continue to interact with posts on the Apokolips blog.
