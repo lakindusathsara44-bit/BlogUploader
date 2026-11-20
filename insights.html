@@ -28,7 +28,9 @@ async function refresh(){
  $('status').textContent='Updating insights from GitHub and Neon…';
  try{
   const [posts,data]=await Promise.all([loadPosts(),loadEngagement()]);
-  $('postTotal').textContent=fmt(posts.length);$('likeTotal').textContent=fmt(data.totalLikes);$('commentTotal').textContent=fmt(data.totalComments);$('reactionTotal').textContent=fmt(data.totalReactions);
+  $('postTotal').textContent=fmt(posts.length);
+  const uploadedLikes=rowsTotal(posts,data,'likes'),uploadedComments=rowsTotal(posts,data,'comments'),uploadedReactions=rowsTotal(posts,data,'reactions');
+  $('likeTotal').textContent=fmt(uploadedLikes);$('commentTotal').textContent=fmt(uploadedComments);$('reactionTotal').textContent=fmt(uploadedReactions);
   const rows=posts.map(p=>({post:p,m:data.byPost[p.slug]||{likes:0,comments:0,reactions:0}}));
   const labels=rows.map(x=>x.post.title.length>22?x.post.title.slice(0,22)+'…':x.post.title);
   const common={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#dceaff'}},tooltip:{mode:'index',intersect:false}},scales:{x:{ticks:{color:'#9aacc4',maxRotation:35,minRotation:0},grid:{color:'#233650'}},y:{beginAtZero:true,ticks:{color:'#9aacc4',precision:0},grid:{color:'#233650'}}}};
@@ -36,11 +38,12 @@ async function refresh(){
   postChart=new Chart($('postChart'),{type:'bar',data:{labels,datasets:[{label:'Likes',data:rows.map(x=>x.m.likes),backgroundColor:'#35d5ff',borderRadius:5},{label:'Comments',data:rows.map(x=>x.m.comments),backgroundColor:'#287bff',borderRadius:5}]},options:common});
   const days=[];const now=new Date();for(let i=13;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);days.push(d.toISOString().slice(0,10));}
   if(trendChart)trendChart.destroy();
-  trendChart=new Chart($('trendChart'),{type:'line',data:{labels:days.map(d=>d.slice(5)),datasets:[{label:'Likes',data:days.map(d=>data.byDay[d]?.likes||0),borderColor:'#35d5ff',backgroundColor:'#35d5ff22',tension:.3,fill:true},{label:'Comments',data:days.map(d=>data.byDay[d]?.comments||0),borderColor:'#287bff',backgroundColor:'#287bff22',tension:.3,fill:true}]},options:{...common,interaction:{mode:'index',intersect:false}}});
+  trendChart=new Chart($('trendChart'),{type:'line',data:{labels:days.map(d=>d.slice(5)),datasets:[{label:'Likes',data:days.map(d=>rows.reduce((sum,x)=>sum+(data.byDayByPost[x.post.slug]?.[d]?.likes||0),0)),borderColor:'#35d5ff',backgroundColor:'#35d5ff22',tension:.3,fill:true},{label:'Comments',data:days.map(d=>rows.reduce((sum,x)=>sum+(data.byDayByPost[x.post.slug]?.[d]?.comments||0),0)),borderColor:'#287bff',backgroundColor:'#287bff22',tension:.3,fill:true}]},options:{...common,interaction:{mode:'index',intersect:false}}});
   $('ranking').innerHTML=rows.map(x=>'<tr><td><strong>'+escapeHtml(x.post.title)+'</strong></td><td>'+x.post.type+'</td><td>'+fmt(x.m.likes)+'</td><td>'+fmt(x.m.comments)+'</td><td>'+fmt(x.m.likes+x.m.comments)+'</td></tr>').join('')||'<tr><td colspan="5">No published posts yet.</td></tr>';
   $('status').textContent='Updated '+new Date().toLocaleString()+' · Includes all comments and replies in the shared database.';
  }catch(e){$('status').textContent='Could not load insights: '+e.message+'. Check GitHub Pages, public post index and Neon anonymous read access.';}
 }
+function rowsTotal(posts,data,key){return posts.reduce((sum,p)=>sum+Number(data.byPost[p.slug]?.[key]||0),0);}
 function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 $('refresh').addEventListener('click',refresh);refresh();
 </script></body></html>
